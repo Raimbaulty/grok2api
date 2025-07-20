@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>Grok Token 管理面板</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+      :root {
+          --bg-primary: #f4f6f9;
+          --card-bg: #ffffff;
+          --text-primary: #2c3e50;
+          --text-secondary: #6c757d;
+          --border-color: #e2e8f0;
+          --primary-color: #3498db;
+          --success-color: #4caf50;
+          --danger-color: #f44336;
+          --warning-color: #ff9800;
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+          font-family: 'Inter', sans-serif;
+          background-color: var(--bg-primary);
+          color: var(--text-primary);
+          line-height: 1.6;
+      }
+      .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+      .search-section { margin-bottom: 20px; }
+      #searchInput { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 16px; }
+      .overview-panel {
+          background-color: var(--card-bg);
+          border-radius: 16px;
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+          padding: 25px;
+          margin-bottom: 25px;
+      }
+      .header-actions {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+      }
+      .overview-stats {
+          display: flex;
+          justify-content: stretch;
+          align-items: center;
+          width: 100%;
+      }
+      .model-remaining-stats {
+          display: flex;
+          gap: 30px;
+          flex-wrap: wrap;
+          justify-content: flex-end;
+      }
+      .model-stat {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+      }
+      .model-stat .stat-label {
+          font-size: 12px;
+          color: var(--text-secondary);
+          margin-bottom: 5px;
+      }
+      .model-stat .stat-value {
+          font-size: 16px;
+          font-weight: 600;
+          color: var(--primary-color);
+          min-width: 40px;
+          text-align: center;
+      }
+      .stat-item { text-align: center; }
+      .stat-value { font-size: 28px; font-weight: 600; color: var(--primary-color); }
+      .stat-label { font-size: 14px; color: var(--text-secondary); }
+      .refresh-icon {
+          cursor: pointer;
+          transition: transform 0.3s;
+      }
+      .refresh-icon:hover {
+          transform: rotate(180deg);
+      }
+      .token-management-section {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 20px;
+          margin-bottom: 25px;
+      }
+      .token-management-section > div {
+          background-color: var(--card-bg);
+          border-radius: 16px;
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+          padding: 25px;
+      }
+      .token-management-section h3 {
+          margin-bottom: 15px;
+          font-size: 16px;
+          color: var(--text-secondary);
+      }
+      .token-input-section { display: flex; gap: 15px; }
+      #tokenInput, #cfInput { 
+          flex-grow: 1; 
+          padding: 12px 15px; 
+          border: 1px solid var(--border-color); 
+          border-radius: 8px; 
+          font-size: 16px; 
+      }
+      #addTokenBtn, #setCfBtn { 
+          padding: 12px 25px; 
+          background-color: var(--primary-color); 
+          color: white; 
+          border: none; 
+          border-radius: 8px; 
+          cursor: pointer; 
+          transition: background-color 0.3s; 
+      }
+      #addTokenBtn:hover, #setCfBtn:hover { background-color: #2980b9; }
+      .token-grid { 
+          display: grid; 
+          grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); 
+          gap: 20px; 
+      }
+      .token-card { 
+          background-color: var(--card-bg); 
+          border-radius: 16px; 
+          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1); 
+          padding: 20px; 
+          transition: transform 0.3s; 
+      }
+      .token-card:hover { transform: translateY(-5px); }
+      .token-header { 
+          display: flex; 
+          justify-content: space-between; 
+          align-items: center; 
+          margin-bottom: 15px; 
+          padding-bottom: 10px; 
+          border-bottom: 1px solid var(--border-color); 
+      }
+      .token-title { 
+          font-size: 14px; 
+          font-weight: 500; 
+          max-width: 250px; 
+          overflow: hidden; 
+          text-overflow: ellipsis; 
+          white-space: nowrap; 
+      }
+      .delete-btn { 
+          background-color: var(--danger-color); 
+          color: white; 
+          border: none; 
+          padding: 5px 10px; 
+          border-radius: 4px; 
+          cursor: pointer; 
+          font-size: 12px; 
+      }
+      .delete-btn:hover { background-color: #c0392b; }
+      .model-row { 
+          display: flex; 
+          align-items: center; 
+          margin-bottom: 10px; 
+          gap: 15px; 
+      }
+      .model-name { 
+          flex: 2; 
+          font-size: 14px; 
+          color: var(--text-secondary); 
+      }
+      .progress-container { 
+          flex: 6; 
+          display: flex; 
+          align-items: center; 
+          gap: 10px; 
+      }
+      .progress-bar { 
+          flex-grow: 1; 
+          height: 8px; 
+          background-color: #e0e0e0; 
+          border-radius: 4px; 
+          overflow: hidden; 
+      }
+      .progress-bar-fill { 
+          height: 100%; 
+          transition: width 0.5s ease; 
+      }
+      .progress-text { 
+          font-size: 12px; 
+          color: var(--text-secondary); 
+          min-width: 50px; 
+          text-align: right; 
+      }
+      .status-badge { 
+          font-size: 12px; 
+          padding: 3px 8px; 
+          border-radius: 12px; 
+          font-weight: 600; 
+          position: relative; 
+          cursor: help; 
+      }
+      .status-badge .tooltip { 
+          visibility: hidden; 
+          position: absolute; 
+          z-index: 1; 
+          bottom: 125%; 
+          left: 50%; 
+          transform: translateX(-50%); 
+          background-color: rgba(0, 0, 0, 0.8); 
+          color: white; 
+          text-align: center; 
+          border-radius: 6px; 
+          padding: 5px 10px; 
+          opacity: 0; 
+          transition: opacity 0.3s; 
+          white-space: nowrap; 
+      }
+      .status-badge:hover .tooltip { 
+          visibility: visible; 
+          opacity: 1; 
+      }
+      .status-badge::after { 
+          content: ''; 
+          position: absolute; 
+          bottom: 100%; 
+          left: 50%; 
+          margin-left: -5px; 
+          border-width: 5px; 
+          border-style: solid; 
+          border-color: transparent transparent rgba(0, 0, 0, 0.8) transparent; 
+          opacity: 0; 
+          transition: opacity 0.3s; 
+      }
+      .status-badge:hover::after { opacity: 1; }
+      .status-active { 
+          background-color: rgba(76, 175, 80, 0.1); 
+          color: var(--success-color); 
+      }
+      .status-expired { 
+          background-color: rgba(244, 67, 54, 0.1); 
+          color: var(--danger-color); 
+      }
+      #notification {
+          position: fixed; 
+          top: 20px; 
+          left: 50%; 
+          transform: translateX(-50%); 
+          background-color: #3498db; 
+          color: white; 
+          padding: 10px 20px; 
+          border-radius: 8px; 
+          box-shadow: 0 4px 8px rgba(0,0,0,0.2); 
+          display: none; 
+          z-index: 1000;
+      }
+  </style>
+</head>
+<body>
+  <div class="container">
+      <div class="search-section">
+          <input type="text" id="searchInput" placeholder="搜索 Token...">
+      </div>
+      
+      <div class="overview-panel">
+          <div class="header-actions">
+              <div class="overview-stats">
+                  <div class="stat-item">
+                      <div class="stat-value" id="totalTokens">0</div>
+                      <div class="stat-label">Token 总数</div>
+                  </div>
+                  <div class="model-remaining-stats">
+                      <div class="model-stat">
+                          <div class="stat-label">grok-2可用次数</div>
+                          <div class="stat-value" id="grok-2-count">0</div>
+                      </div>
+                      <div class="model-stat">
+                          <div class="stat-label">grok-3可用次数</div>
+                          <div class="stat-value" id="grok-3-count">0</div>
+                      </div>
+                      <div class="model-stat">
+                          <div class="stat-label">grok-3-deepsearch可用次数</div>
+                          <div class="stat-value" id="grok-3-deepsearch-count">0</div>
+                      </div>
+                      <div class="model-stat">
+                          <div class="stat-label">grok-3-reasoning可用次数</div>
+                          <div class="stat-value" id="grok-3-reasoning-count">0</div>
+                      </div>
+                  </div>
+              </div>
+              <div class="refresh-icon" id="refreshTokens">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                      <path d="M21 3v5h-5"/>
+                      <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+                      <path d="M3 21v-5h5"/>
+                  </svg>
+              </div>
+          </div>
+      </div>
+      
+      <div class="token-management-section">
+          <div class="token-input-container">
+              <h3>添加 SSO Token</h3>
+              <div class="token-input-section">
+                  <input type="text" id="tokenInput" placeholder="输入新的 SSO Token">
+                  <button id="addTokenBtn">添加 Token</button>
+              </div>
+          </div>
+          
+          <div class="cf-input-container">
+              <h3>设置 CF Clearance</h3>
+              <div class="token-input-section">
+                  <input type="text" id="cfInput" placeholder="输入 CF Clearance">
+                  <button id="setCfBtn">设置 CF</button>
+              </div>
+          </div>
+      </div>
+      
+      <div id="tokenGrid" class="token-grid"></div>
+  </div>
+  
+  <div id="notification"></div>
+  
+  <script>
+      // Token 模型配置
+      const modelConfig = {
+          "grok-2": { RequestFrequency: 30, ExpirationTime: 3600000 },
+          "grok-3": { RequestFrequency: 20, ExpirationTime: 7200000 },
+          "grok-3-deepsearch": { RequestFrequency: 10, ExpirationTime: 86400000 },
+          "grok-3-reasoning": { RequestFrequency: 10, ExpirationTime: 86400000 }
+      };
+
+      let tokenMap = {};
+
+      // 根据百分比返回进度条颜色
+      function getProgressColor(percentage) {
+          if (percentage > 70) return 'var(--danger-color)';
+          if (percentage > 30) return 'var(--warning-color)';
+          return 'var(--success-color)';
+      }
+
+      function calculateModelRemaining() {
+          const modelRemaining = {};
+          Object.keys(modelConfig).forEach(modelName => {
+              const maxRequests = modelConfig[modelName].RequestFrequency;
+              modelRemaining[modelName] = 0;
+              
+              Object.values(tokenMap).forEach(tokenData => {
+                  const modelData = tokenData[modelName];
+                  if (modelData.isValid) {
+                      modelRemaining[modelName] += maxRequests - modelData.totalRequestCount;
+                  }
+              });
+          });
+          return modelRemaining;
+      }
+
+      function updateTokenCounters() {
+          document.getElementById('totalTokens').textContent = Object.keys(tokenMap).length;
+          
+          const modelRemaining = calculateModelRemaining();
+          
+          // 更新每个模型的可用次数
+          const modelIds = ['grok-2', 'grok-3', 'grok-3-deepsearch', 'grok-3-reasoning'];
+          modelIds.forEach(modelName => {
+              const countElement = document.getElementById(`${modelName}-count`);
+              if (countElement) {
+                  countElement.textContent = modelRemaining[modelName] || 0;
+              }
+          });
+      }
+
+      // 更新失效 Token 的倒计时，并在时间到达时刷新状态
+      async function updateExpiredTokenTimers() {
+          const currentTime = Date.now();
+          const expiredBadges = document.querySelectorAll('.status-badge.status-expired');
+          for (const badge of expiredBadges) {
+              const invalidatedTime = parseInt(badge.getAttribute('data-invalidated-time'), 10);
+              const expirationTime = parseInt(badge.getAttribute('data-expiration-time'), 10);
+              const recoveryTime = invalidatedTime + expirationTime;
+              const remainingTime = recoveryTime - currentTime;
+              const tooltip = badge.querySelector('.tooltip');
+              if (tooltip) {
+                  if (remainingTime > 0) {
+                      const minutes = Math.floor(remainingTime / 60000);
+                      const seconds = Math.floor((remainingTime % 60000) / 1000);
+                      tooltip.textContent = `${minutes}分${seconds}秒后恢复`;
+                  } else {
+                      tooltip.textContent = '已可恢复';
+                      await fetchTokenMap();
+                  }
+              }
+          }
+      }
+
+      // 渲染 Token 卡片
+      function renderTokens() {
+          const tokenGrid = document.getElementById('tokenGrid');
+          tokenGrid.innerHTML = '';
+          Object.entries(tokenMap).forEach(([token, tokenData]) => {
+              const tokenCard = document.createElement('div');
+              tokenCard.className = 'token-card';
+              tokenCard.setAttribute('data-token', token);
+              const tokenHeader = document.createElement('div');
+              tokenHeader.className = 'token-header';
+              const tokenTitle = document.createElement('div');
+              tokenTitle.className = 'token-title';
+              tokenTitle.textContent = token;
+              tokenTitle.title = token;
+              tokenTitle.style.cursor = 'pointer';
+              tokenTitle.addEventListener('click', () => {
+                  navigator.clipboard.writeText(token).then(() => {
+                      showNotification('Token 已复制');
+                  }).catch(err => {
+                      showNotification('复制失败');
+                  });
+              });
+              const deleteBtn = document.createElement('button');
+              deleteBtn.className = 'delete-btn';
+              deleteBtn.textContent = '删除';
+              deleteBtn.addEventListener('click', async () => {
+                  if (confirm(`确认删除 token: ${token}?`)) {
+                      try {
+                          const response = await fetch('/manager/api/delete', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ sso: token })
+                          });
+                          if (response.ok) {
+                              await fetchTokenMap();
+                              showNotification('Token 删除成功');
+                          } else {
+                              showNotification('删除 Token 失败');
+                          }
+                      } catch (error) {
+                          showNotification('删除 Token 出错');
+                      }
+                  }
+              });
+              tokenHeader.appendChild(tokenTitle);
+              tokenHeader.appendChild(deleteBtn);
+              tokenCard.appendChild(tokenHeader);
+
+              Object.entries(modelConfig).forEach(([modelName, config]) => {
+                  const modelRow = document.createElement('div');
+                  modelRow.className = 'model-row';
+                  const modelNameSpan = document.createElement('div');
+                  modelNameSpan.className = 'model-name';
+                  modelNameSpan.textContent = modelName;
+                  const progressContainer = document.createElement('div');
+                  progressContainer.className = 'progress-container';
+                  const progressBar = document.createElement('div');
+                  progressBar.className = 'progress-bar';
+                  const progressBarFill = document.createElement('div');
+                  progressBarFill.className = 'progress-bar-fill';
+                  const modelData = tokenData[modelName];
+                  const requestCount = modelData.totalRequestCount;
+                  const maxRequests = config.RequestFrequency;
+                  const percentage = (requestCount / maxRequests) * 100;
+                  progressBarFill.style.width = `${percentage}%`;
+                  progressBarFill.style.backgroundColor = getProgressColor(percentage);
+                  progressBar.appendChild(progressBarFill);
+                  const progressText = document.createElement('div');
+                  progressText.className = 'progress-text';
+                  progressText.textContent = `${requestCount}/${maxRequests}`;
+                  const statusBadge = document.createElement('div');
+                  statusBadge.className = 'status-badge';
+                  if (!modelData.isValid) {
+                      statusBadge.classList.add('status-expired');
+                      statusBadge.textContent = '失效';
+                      statusBadge.setAttribute('data-invalidated-time', modelData.invalidatedTime);
+                      statusBadge.setAttribute('data-expiration-time', config.ExpirationTime);
+                      const tooltip = document.createElement('div');
+                      tooltip.className = 'tooltip';
+                      statusBadge.appendChild(tooltip);
+                  } else {
+                      statusBadge.classList.add('status-active');
+                      statusBadge.textContent = '活跃';
+                  }
+                  progressContainer.appendChild(progressBar);
+                  progressContainer.appendChild(progressText);
+                  modelRow.appendChild(modelNameSpan);
+                  modelRow.appendChild(progressContainer);
+                  modelRow.appendChild(statusBadge);
+                  tokenCard.appendChild(modelRow);
+              });
+              tokenGrid.appendChild(tokenCard);
+          });
+          updateTokenCounters();
+      }
+
+      // 获取 Token 数据
+      async function fetchTokenMap() {
+          try {
+              const response = await fetch('/manager/api/get');
+              if (!response.ok) throw new Error('获取 Token 失败');
+              tokenMap = await response.json();
+              renderTokens();
+          } catch (error) {
+              showNotification('获取 Token 出错');
+          }
+      }
+
+      // 添加 Token 事件
+      document.getElementById('addTokenBtn').addEventListener('click', async () => {
+          const tokenInput = document.getElementById('tokenInput');
+          const newToken = tokenInput.value.trim();
+          if (newToken) {
+              try {
+                  const response = await fetch('/manager/api/add', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ sso: newToken })
+                  });
+                  if (response.ok) {
+                      tokenInput.value = '';
+                      await fetchTokenMap();
+                      showNotification('Token 添加成功');
+                  } else {
+                      showNotification('添加 Token 失败');
+                  }
+              } catch (error) {
+                  showNotification('添加 Token 出错');
+              }
+          }
+      });
+
+      // 设置 CF Clearance 事件
+      document.getElementById('setCfBtn').addEventListener('click', async () => {
+          const cfInput = document.getElementById('cfInput');
+          const newCf = cfInput.value.trim();
+          if (newCf) {
+              try {
+                  const response = await fetch('/manager/api/cf_clearance', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ cf_clearance: newCf })
+                  });
+                  if (response.ok) {
+                      cfInput.value = '';
+                      showNotification('CF Clearance 设置成功');
+                  } else {
+                      showNotification('设置 CF Clearance 失败');
+                  }
+              } catch (error) {
+                  showNotification('设置 CF Clearance 出错');
+              }
+          }
+      });
+
+      // 搜索功能
+      document.getElementById('searchInput').addEventListener('input', (e) => {
+          const searchTerm = e.target.value.toLowerCase();
+          const tokenCards = document.querySelectorAll('.token-card');
+          tokenCards.forEach(card => {
+              const token = card.getAttribute('data-token').toLowerCase();
+              card.style.display = token.includes(searchTerm) ? 'block' : 'none';
+          });
+      });
+
+      // 刷新 Token 列表事件
+      document.getElementById('refreshTokens').addEventListener('click', async () => {
+          await fetchTokenMap();
+          showNotification('Token 列表已刷新');
+      });
+
+      // 初始化加载 Token 数据
+      fetchTokenMap();
+      // 每秒更新失效 Token 的状态
+      setInterval(updateExpiredTokenTimers, 1000);
+
+      // 显示气泡通知
+      function showNotification(message) {
+          const notification = document.getElementById('notification');
+          notification.textContent = message;
+          notification.style.display = 'block';
+          setTimeout(() => {
+              notification.style.display = 'none';
+          }, 2000);
+      }
+  </script>
+</body>
+</html>
