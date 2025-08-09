@@ -98,6 +98,7 @@ CONFIG = {
         'grok-2-imageGen': 'grok-latest',
         'grok-2-search': 'grok-latest',
         "grok-3": "grok-3",
+        "grok-4": "grok-4",
         "grok-3-search": "grok-3",
         "grok-3-imageGen": "grok-3",
         "grok-3-deepsearch": "grok-3",
@@ -165,6 +166,10 @@ class AuthTokenManager:
             "grok-2": {
                 "RequestFrequency": 30,
                 "ExpirationTime": 1 * 60 * 60 * 1000  # 1小时
+            },
+            "grok-4": {
+                "RequestFrequency": 5,
+                "ExpirationTime": 12 * 60 * 60 * 1000  # 2小时
             },
             "grok-3": {
                 "RequestFrequency": 20,
