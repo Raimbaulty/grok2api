@@ -706,6 +706,7 @@ class GrokApiClient:
         return {
             "temporary": CONFIG["API"].get("IS_TEMP_CONVERSATION", False),
             "modelName": self.model_id,
+            "responseMetadata":{"requestModelDetails":{"modelId":self.model_id}},
             "message": messages.strip(),
             "fileAttachments": file_attachments[:4],
             "imageAttachments": [],
