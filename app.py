@@ -80,7 +80,7 @@ class Logger:
         self.logger.bind(**caller_info).info(f"请求: {request.method} {request.path}", "Request")
 
 logger = Logger(level="INFO")
-DATA_DIR = Path("/data")
+DATA_DIR = Path("/app/data")
 
 if not DATA_DIR.exists():
     DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -110,7 +110,7 @@ CONFIG = {
     },
     "ADMIN": {
         "MANAGER_SWITCH": os.environ.get("MANAGER_SWITCH") or None,
-        "PASSWORD": os.environ.get("ADMINPASSWORD") or None 
+        "PASSWORD": os.environ.get("ADMINPASSWORD") or None
     },
     "SERVER": {
         "COOKIE": None,
@@ -156,7 +156,7 @@ class AuthTokenManager:
         self.expired_tokens = set()
         self.token_status_map = {}
         self.model_super_config = {
-            
+
                 "grok-3": {
                     "RequestFrequency": 100,
                     "ExpirationTime": 3 * 60 * 60 * 1000  # 3小时
@@ -204,13 +204,13 @@ class AuthTokenManager:
         self.token_reset_switch = False
         self.token_reset_timer = None
     def save_token_status(self):
-        try:        
+        try:
             with open(CONFIG["TOKEN_STATUS_FILE"], 'w', encoding='utf-8') as f:
                 json.dump(self.token_status_map, f, indent=2, ensure_ascii=False)
             logger.info("令牌状态已保存到配置文件", "TokenManager")
         except Exception as error:
             logger.error(f"保存令牌状态失败: {str(error)}", "TokenManager")
-            
+
     def load_token_status(self):
         try:
             token_status_file = Path(CONFIG["TOKEN_STATUS_FILE"])
@@ -291,7 +291,7 @@ class AuthTokenManager:
 
             if sso in self.token_status_map:
                 del self.token_status_map[sso]
-            
+
             self.save_token_status()
 
             logger.info(f"令牌已成功移除: {token}", "TokenManager")
@@ -302,33 +302,33 @@ class AuthTokenManager:
     def reduce_token_request_count(self, model_id, count):
         try:
             normalized_model = self.normalize_model_name(model_id)
-            
+
             if normalized_model not in self.token_model_map:
                 logger.error(f"模型 {normalized_model} 不存在", "TokenManager")
                 return False
-                
+
             if not self.token_model_map[normalized_model]:
                 logger.error(f"模型 {normalized_model} 没有可用的token", "TokenManager")
                 return False
-                
+
             token_entry = self.token_model_map[normalized_model][0]
-            
+
             # 确保RequestCount不会小于0
             new_count = max(0, token_entry["RequestCount"] - count)
             reduction = token_entry["RequestCount"] - new_count
-            
+
             token_entry["RequestCount"] = new_count
-            
+
             # 更新token状态
             if token_entry["token"]:
                 sso = token_entry["token"].split("sso=")[1].split(";")[0]
                 if sso in self.token_status_map and normalized_model in self.token_status_map[sso]:
                     self.token_status_map[sso][normalized_model]["totalRequestCount"] = max(
-                        0, 
+                        0,
                         self.token_status_map[sso][normalized_model]["totalRequestCount"] - reduction
                     )
             return True
-            
+
         except Exception as error:
             logger.error(f"重置校对token请求次数时发生错误: {str(error)}", "TokenManager")
             return False
@@ -370,7 +370,7 @@ class AuthTokenManager:
                     self.token_status_map[sso][normalized_model]["invalidatedTime"] = int(time.time() * 1000)
                 self.token_status_map[sso][normalized_model]["totalRequestCount"] += 1
 
-                
+
 
                 self.save_token_status()
 
@@ -424,7 +424,7 @@ class AuthTokenManager:
 
         for model in self.model_config.keys():
             model_tokens = self.token_model_map.get(model, [])
-            
+
             model_request_frequency = sum(token_entry.get("MaxRequestCount", 0) for token_entry in model_tokens)
             total_used_requests = sum(token_entry.get("RequestCount", 0) for token_entry in model_tokens)
 
@@ -553,17 +553,17 @@ class Utils:
 
         if proxy:
             logger.info(f"使用代理: {proxy}", "Server")
-            
+
             if proxy.startswith("socks5://"):
                 proxy_options["proxy"] = proxy
-            
+
                 if '@' in proxy:
                     auth_part = proxy.split('@')[0].split('://')[1]
                     if ':' in auth_part:
                         username, password = auth_part.split(':')
                         proxy_options["proxy_auth"] = (username, password)
             else:
-                proxy_options["proxies"] = {"https": proxy, "http": proxy}     
+                proxy_options["proxies"] = {"https": proxy, "http": proxy}
         return proxy_options
 
 class GrokApiClient:
@@ -602,7 +602,7 @@ class GrokApiClient:
             }
 
             logger.info("发送文字文件请求", "Server")
-            cookie = f"{Utils.create_auth_headers(model, True)};{CONFIG['SERVER']['CF_CLEARANCE']}" 
+            cookie = f"{Utils.create_auth_headers(model, True)};{CONFIG['SERVER']['CF_CLEARANCE']}"
             proxy_options = Utils.get_proxy_options()
             response = curl_requests.post(
                 "https://grok.com/rest/app-chat/upload-file",
@@ -778,7 +778,7 @@ class GrokApiClient:
             message_length += len(messages)
             if message_length >= 40000:
                 convert_to_file = True
-               
+
         if convert_to_file:
             file_id = self.upload_base64_file(messages, request["model"])
             if file_id:
@@ -879,7 +879,7 @@ def process_model_response(response, model):
         elif (response.get("messageStepId") and CONFIG["IS_THINKING"] and response.get("messageTag") == "assistant") or response.get("messageTag") == "final":
             result["token"] = response.get("token","")
         elif (CONFIG["IS_THINKING"] and response.get("token","").get("action","") == "webSearch"):
-            result["token"] = response.get("token","").get("action_input","").get("query","")            
+            result["token"] = response.get("token","").get("action_input","").get("query","")
         elif (CONFIG["IS_THINKING"] and response.get("webSearchResults")):
             result["token"] = Utils.organize_search_results(response['webSearchResults'])
     elif model == 'grok-3-reasoning':
@@ -909,7 +909,7 @@ def process_model_response(response, model):
             result["token"] = "</think>" + response.get("token", "")
             CONFIG["IS_THINKING"] = False
         else:
-            result["token"] = response.get("token")  
+            result["token"] = response.get("token")
     elif model in ['grok-4-deepsearch']:
         if response.get("messageStepId") and not CONFIG["SHOW_THINKING"]:
             return result
@@ -922,9 +922,9 @@ def process_model_response(response, model):
         elif (response.get("messageStepId") and CONFIG["IS_THINKING"] and response.get("messageTag") == "assistant") or response.get("messageTag") == "final":
             result["token"] = response.get("token","")
         elif (CONFIG["IS_THINKING"] and response.get("token","").get("action","") == "webSearch"):
-            result["token"] = response.get("token","").get("action_input","").get("query","")            
+            result["token"] = response.get("token","").get("action_input","").get("query","")
         elif (CONFIG["IS_THINKING"] and response.get("webSearchResults")):
-            result["token"] = Utils.organize_search_results(response['webSearchResults'])      
+            result["token"] = Utils.organize_search_results(response['webSearchResults'])
 
     return result
 
@@ -1108,38 +1108,68 @@ def handle_stream_response(response, model):
         yield "data: [DONE]\n\n"
     return generate()
 
+# ==============================================================================
+# vvvvvvvvvvvvvvvvvvv  这里是唯一的修改区域 vvvvvvvvvvvvvvvv
+# ==============================================================================
 def initialization():
-    sso_array = os.environ.get("SSO", "").split(',')
-    sso_array_super = os.environ.get("SSO_SUPER", "").split(',')
-
-    combined_dict = []
-    for value in sso_array_super:
-        combined_dict.append({
-            "token": f"sso-rw={value};sso={value}", 
-            "type": "super"
-        })
-    for value in sso_array:
-        combined_dict.append({
-            "token": f"sso-rw={value};sso={value}", 
-            "type": "normal"
-        })
-    
-
-    logger.info("开始加载令牌", "Server")
+    """
+    初始化函数，现在从 token_status.json 文件加载令牌，而不是从环境变量加载。
+    """
+    logger.info("开始从 token_status.json 加载令牌", "Server")
+    # 步骤1: 加载持久化的令牌状态到 token_manager.token_status_map
     token_manager.load_token_status()
-    for tokens in combined_dict:
-        if tokens:
-            token_manager.add_token(tokens,True)
-    token_manager.save_token_status()
 
-    logger.info(f"成功加载令牌: {json.dumps(token_manager.get_all_tokens(), indent=2)}", "Server")
-    logger.info(f"令牌加载完成，共加载: {len(sso_array)+len(sso_array_super)}个令牌", "Server")
-    logger.info(f"其中共加载: {len(sso_array_super)}个super会员令牌", "Server")
+    # 从加载的状态中获取令牌信息
+    loaded_tokens_from_file = token_manager.get_token_status_map()
+
+    if not loaded_tokens_from_file:
+        logger.warning("token_status.json 为空或不存在，未加载任何令牌。", "Server")
+        logger.warning("请通过 API 或后台管理页面添加您的第一个令牌。", "Server")
+    else:
+        logger.info(f"从 token_status.json 发现 {len(loaded_tokens_from_file)} 个令牌，正在重新构建活跃令牌池...", "Server")
+
+        # 步骤2: 遍历加载的状态，重新填充活跃令牌池 (token_manager.token_model_map)
+        for sso, models_status in loaded_tokens_from_file.items():
+            if not sso or not models_status:
+                continue
+
+            # 通过检查任一模型的isSuper标志来确定令牌类型
+            first_model_status = next(iter(models_status.values()), None)
+            if not first_model_status:
+                continue
+
+            token_type = "super" if first_model_status.get("isSuper") else "normal"
+
+            # 准备令牌信息字典
+            token_info = {
+                "token": f"sso-rw={sso};sso={sso}",
+                "type": token_type
+            }
+
+            # 使用 add_token 将令牌添加到活跃池中
+            # isinitialization=True 避免在启动时重复保存文件
+            token_manager.add_token(token_info, isinitialization=True)
+
+    # 步骤3: 统计并打印最终加载结果
+    all_loaded_tokens = token_manager.get_all_tokens()
+    super_token_count = 0
+    status_map = token_manager.get_token_status_map()
+    for sso_key in status_map:
+        # 检查任一模型的配置来判断是否为super令牌
+        if status_map[sso_key] and next(iter(status_map[sso_key].values()), {}).get('isSuper'):
+            super_token_count += 1
+
+    logger.info(f"成功加载令牌: {json.dumps(all_loaded_tokens, indent=2)}", "Server")
+    logger.info(f"令牌加载完成，共加载: {len(all_loaded_tokens)}个令牌", "Server")
+    logger.info(f"其中共加载: {super_token_count}个super会员令牌", "Server")
 
     if CONFIG["API"]["PROXY"]:
         logger.info(f"代理已设置: {CONFIG['API']['PROXY']}", "Server")
 
     logger.info("初始化完成", "Server")
+# ==============================================================================
+# ^^^^^^^^^^^^^^^^^^  这里是唯一的修改区域 ^^^^^^^^^^^^^^^^^^
+# ==============================================================================
 
 
 app = Flask(__name__)
@@ -1200,8 +1230,8 @@ def delete_manager_token():
         return jsonify({"success": True})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    
-@app.route('/manager/api/cf_clearance', methods=['POST'])   
+
+@app.route('/manager/api/cf_clearance', methods=['POST'])
 def setCf_Manager_clearance():
     if not check_auth():
         return jsonify({"error": "Unauthorized"}), 401
@@ -1239,7 +1269,7 @@ def add_token():
     except Exception as error:
         logger.error(str(error), "Server")
         return jsonify({"error": '添加sso令牌失败'}), 500
-    
+
 @app.route('/set/cf_clearance', methods=['POST'])
 def setCf_clearance():
     auth_token = request.headers.get('Authorization', '').replace('Bearer ', '')
@@ -1252,7 +1282,7 @@ def setCf_clearance():
     except Exception as error:
         logger.error(str(error), "Server")
         return jsonify({"error": '设置cf_clearance失败'}), 500
-    
+
 @app.route('/delete/token', methods=['POST'])
 def delete_token():
     auth_token = request.headers.get('Authorization', '').replace('Bearer ', '')
@@ -1320,9 +1350,9 @@ def chat_completions():
                 f"当前令牌: {json.dumps(CONFIG['API']['SIGNATURE_COOKIE'], indent=2)}","Server")
             logger.info(
                 f"当前可用模型的全部可用数量: {json.dumps(token_manager.get_remaining_token_request_capacity(), indent=2)}","Server")
-            
+
             if CONFIG['SERVER']['CF_CLEARANCE']:
-                CONFIG["SERVER"]['COOKIE'] = f"{CONFIG['API']['SIGNATURE_COOKIE']};{CONFIG['SERVER']['CF_CLEARANCE']}" 
+                CONFIG["SERVER"]['COOKIE'] = f"{CONFIG['API']['SIGNATURE_COOKIE']};{CONFIG['SERVER']['CF_CLEARANCE']}"
             else:
                 CONFIG["SERVER"]['COOKIE'] = CONFIG['API']['SIGNATURE_COOKIE']
             logger.info(json.dumps(request_payload,indent=2),"Server")
@@ -1331,7 +1361,7 @@ def chat_completions():
                 response = curl_requests.post(
                     f"{CONFIG['API']['BASE_URL']}/rest/app-chat/conversations/new",
                     headers={
-                        **DEFAULT_HEADERS, 
+                        **DEFAULT_HEADERS,
                         "Cookie":CONFIG["SERVER"]['COOKIE']
                     },
                     data=json.dumps(request_payload),
@@ -1398,7 +1428,7 @@ def chat_completions():
         if response_status_code == 403:
             raise ValueError('IP暂时被封无法破盾，请稍后重试或者更换ip')
         elif response_status_code == 500:
-            raise ValueError('当前模型所有令牌暂无可用，请稍后重试')    
+            raise ValueError('当前模型所有令牌暂无可用，请稍后重试')
 
     except Exception as error:
         logger.error(str(error), "ChatAPI")
