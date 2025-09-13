@@ -7,13 +7,13 @@ run python -m playwright install --with-deps chromium
 
 COPY . .
 
-ENV PORT=5678
+ENV PORT=7860
 ENV SHOW_THINKING=False
 ENV IS_CUSTOM_SSO=False
 ENV MANAGER_SWITCH=False
 ENV IS_TEMP_CONVERSATION=True
 ENV ISSHOW_SEARCH_RESULTS=False
 
-EXPOSE 5678
+EXPOSE 7860
 
 CMD ["python", "app.py"]
